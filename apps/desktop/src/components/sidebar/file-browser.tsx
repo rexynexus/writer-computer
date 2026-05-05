@@ -35,7 +35,8 @@ export function FileBrowser() {
           </span>
           Search
           <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-[var(--text-muted)]">
-            ⌘<span className="ml-0.5">P</span>
+            {navigator.platform.startsWith("Mac") ? "⌘" : "Ctrl+"}
+            <span className="ml-0.5">P</span>
           </kbd>
         </button>
       </div>

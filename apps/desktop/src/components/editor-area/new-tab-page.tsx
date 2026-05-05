@@ -1,9 +1,11 @@
 import { useOpenCommandPalette } from "@/hooks/use-command-palette";
 
+const isMac = navigator.platform.startsWith("Mac");
+const modKey = isMac ? "⌘" : "Ctrl+";
+
 function Shortcut({ children }: { children: string }) {
-  return (
-    <kbd className="text-[11px] tracking-[0.2em] text-[var(--text-icon-muted)]">{children}</kbd>
-  );
+  const label = children.replace("⌘", modKey);
+  return <kbd className="text-[11px] tracking-[0.2em] text-[var(--text-icon-muted)]">{label}</kbd>;
 }
 
 export function NewTabPage() {

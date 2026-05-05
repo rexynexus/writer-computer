@@ -13,20 +13,12 @@
     "macOSPrivateApi": true,
     "windows": [
       {
-        "title": "",
-        "titleBarStyle": "Overlay",
-        "hiddenTitle": true,
-        "trafficLightPosition": { "x": 20, "y": 29 },
-        "transparent": true,
-        "windowEffects": {
-          "effects": ["hudWindow"],
-          "state": "followsWindowActiveState"
-        },
+        "title": "Writer",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
         "minHeight": 500,
-        "visible": false
+        "visible": true
       }
     ],
     "security": {

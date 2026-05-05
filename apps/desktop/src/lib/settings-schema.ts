@@ -138,7 +138,7 @@ export function readPrimaries(mode: ThemeMode, settings: Record<string, unknown>
 // edit one mode without touching the other. Glob is used so dropping a new
 // folder under `themes/` registers a new preset automatically.
 
-const presetFiles = import.meta.glob<PrimarySet>("@shared/themes/*/*.json", {
+const presetFiles = import.meta.glob<PrimarySet>("../../shared/themes/*/*.json", {
   eager: true,
   import: "default",
 });
