@@ -88,6 +88,16 @@ pub(crate) fn open_new_workspace_window(
 
     if let Some(existing_label) = app.state::<AppState>().find_by_workspace(&workspace) {
         if let Some(window) = app.get_webview_window(&existing_label) {
+            if file.is_some() {
+                queue_open_event(
+                    app,
+                    &existing_label,
+                    PendingOpenPayload {
+                        workspace: workspace_path,
+                        file,
+                    },
+                );
+            }
             let _ = window.set_focus();
             return Ok(());
         }
@@ -305,7 +315,25 @@ fn handle_single_instance(app: &tauri::AppHandle, argv: Vec<String>) {
     let path_arg = argv.into_iter().nth(1);
     match path_arg.and_then(|arg| resolve_path(&PathBuf::from(arg))) {
         Some(payload) => {
-            if let Err(err) =
+            // Try to route the file to an existing window rather than opening
+            // a new one. First check if the workspace is already open; if not,
+            // fall back to the main window (or any window) so the file opens
+            // as a tab in the current session.
+            let target_label = app
+                .state::<AppState>()
+                .find_by_workspace(&PathBuf::from(&payload.workspace))
+                .or_else(|| {
+                    app.get_webview_window(MAIN_WINDOW_LABEL)
+                        .map(|_| MAIN_WINDOW_LABEL.to_string())
+                })
+                .or_else(|| app.state::<AppState>().labels().into_iter().next());
+
+            if let Some(label) = target_label {
+                queue_open_event(app, &label, payload);
+                if let Some(window) = app.get_webview_window(&label) {
+                    let _ = window.set_focus();
+                }
+            } else if let Err(err) =
                 open_new_workspace_window(app, payload.workspace.clone(), payload.file.clone())
             {
                 eprintln!("failed to open new window from single-instance argv: {err:?}");

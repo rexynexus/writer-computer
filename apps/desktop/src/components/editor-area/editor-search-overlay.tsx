@@ -84,10 +84,16 @@ export function EditorSearchOverlay() {
 
   const actions = useMemo(() => {
     function next() {
-      if (view && query) findNext(view);
+      if (view && query) {
+        findNext(view);
+        scrollMatchIntoCenter(view);
+      }
     }
     function prev() {
-      if (view && query) findPrevious(view);
+      if (view && query) {
+        findPrevious(view);
+        scrollMatchIntoCenter(view);
+      }
     }
     function doReplace() {
       if (view && query) replaceNext(view);
@@ -114,10 +120,32 @@ export function EditorSearchOverlay() {
     }
   }
 
+  function scrollMatchIntoCenter(v: EditorView) {
+    requestAnimationFrame(() => {
+      const head = v.state.selection.main.head;
+      const coords = v.coordsAtPos(head);
+      if (!coords) return;
+      let scroller: HTMLElement | null = v.dom.parentElement;
+      while (scroller) {
+        const style = getComputedStyle(scroller);
+        if (style.overflowY === "auto" || style.overflowY === "scroll") break;
+        scroller = scroller.parentElement;
+      }
+      if (!scroller) return;
+      const rect = scroller.getBoundingClientRect();
+      const matchAbsolute = coords.top - rect.top + scroller.scrollTop;
+      scroller.scrollTo({ top: matchAbsolute - rect.height / 2, behavior: "instant" });
+    });
+  }
+
   function onQueryChange(nextQuery: string) {
     if (!view) return;
     setQuery(nextQuery);
     applyEditorSearchQuery(view, nextQuery, replaceText);
+    if (nextQuery) {
+      findNext(view);
+      scrollMatchIntoCenter(view);
+    }
   }
 
   function onReplaceTextChange(nextReplaceText: string) {

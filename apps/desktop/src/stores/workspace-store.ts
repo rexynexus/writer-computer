@@ -35,17 +35,15 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   recentWorkspaces: [],
 
   openWorkspace: async (path: string) => {
-    // Multi-window: when this window already has a workspace, open the new
-    // one in a fresh in-process window instead of replacing the current
-    // workspace. Each window has its own `WorkspaceState` on the Rust side
-    // so file watchers, search indexes, and session state stay isolated.
     const prevRoot = get().root;
-    if (prevRoot && prevRoot !== path) {
-      await tauri.openWorkspaceInNewWindow(path);
-      return;
-    }
     if (prevRoot === path) {
       return;
+    }
+
+    // Save current session before switching so it can be restored later.
+    if (prevRoot) {
+      const snapshot = getEditorSessionSnapshot(useEditorStore.getState());
+      await saveSession(prevRoot, snapshot.tabs, snapshot.activeIndex);
     }
 
     // Clear editor state before switching

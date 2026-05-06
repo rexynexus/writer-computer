@@ -10,19 +10,24 @@ import * as tauri from "@/lib/tauri";
 async function handleOpenPayload(payload: PendingOpenPayload) {
   const current = useWorkspaceStore.getState().root;
 
-  // Different workspace: open in a new in-process window so the current
-  // window is preserved. The new window pre-queues the pending-open payload
-  // and hydrates onto it during its normal startup flow.
-  if (current && payload.workspace !== current) {
-    await tauri.openWorkspaceInNewWindow(payload.workspace, payload.file);
-    return;
-  }
-
   if (payload.workspace !== current) {
     await useWorkspaceStore.getState().openWorkspace(payload.workspace);
   }
   if (payload.file) {
-    await useEditorStore.getState().openFile(payload.file);
+    const store = useEditorStore.getState();
+    const alreadyOpen = store.tabs.some(
+      (t) => t.location.kind === "file" && t.location.path === payload.file,
+    );
+    if (alreadyOpen) {
+      store.setActiveFile(payload.file);
+    } else {
+      const activeTab = store.tabs.find((t) => t.id === store.activeTabId);
+      if (activeTab?.location.kind === "launcher") {
+        await store.replaceTabWithFile(activeTab.id, payload.file);
+      } else {
+        await store.openFileInNewTab(payload.file);
+      }
+    }
   }
 }
 

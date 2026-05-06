@@ -395,6 +395,62 @@ function createEditorExtensions(
     }),
     linkNavigationExtension(getFilePath, isDisposed),
     editorBodyContextMenuExtension(getFilePath, isDisposed),
+    // Fix click positioning near hidden markdown tokens (**, *, `, etc).
+    // ProseMarked hides syntax markers with font-size:0, which breaks
+    // CodeMirror's posAtCoords mapping. Use the browser's native caret
+    // API to get the correct text position, and snap out of hidden
+    // tokens when the caret lands inside one.
+    Prec.high(
+      EditorView.domEventHandlers({
+        mousedown(event, view) {
+          if (event.button !== 0) return false;
+          const range = document.caretRangeFromPoint(event.clientX, event.clientY);
+          if (!range) return false;
+          let node: Node | null = range.startContainer;
+          let offset = range.startOffset;
+
+          // If the caret landed inside (or on) a hidden-token element,
+          // walk to the nearest visible text boundary.
+          const hidden =
+            node instanceof Element
+              ? node.closest(".cm-hidden-token")
+              : node.parentElement?.closest(".cm-hidden-token");
+          if (hidden) {
+            // Decide which side to snap to based on click x relative
+            // to the hidden token's position in the line.
+            const hiddenRect = hidden.getBoundingClientRect();
+            const prevSibling = hidden.previousSibling;
+            const nextSibling = hidden.nextSibling;
+            if (
+              prevSibling &&
+              event.clientX <= hiddenRect.left &&
+              prevSibling.nodeType === Node.TEXT_NODE
+            ) {
+              node = prevSibling;
+              offset = prevSibling.textContent?.length ?? 0;
+            } else if (nextSibling && nextSibling.nodeType === Node.TEXT_NODE) {
+              node = nextSibling;
+              offset = 0;
+            } else if (prevSibling && prevSibling.nodeType === Node.TEXT_NODE) {
+              node = prevSibling;
+              offset = prevSibling.textContent?.length ?? 0;
+            } else {
+              return false;
+            }
+          }
+
+          if (node.nodeType !== Node.TEXT_NODE) return false;
+          const cmPos = view.posAtDOM(node, offset);
+          if (cmPos === null) return false;
+          const cmCoordPos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+          if (cmCoordPos !== null && cmCoordPos === cmPos) return false;
+          requestAnimationFrame(() => {
+            view.dispatch({ selection: { anchor: cmPos } });
+          });
+          return false;
+        },
+      }),
+    ),
     setupCompartment.of(prosemarkBasicSetup()),
     drawSelection(),
     prosemarkBaseThemeSetup(),
